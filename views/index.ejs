@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<title>IT firm Interview</title>
+	<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+	<link rel="stylesheet" type="text/css" href="css/app-style.css">
+</head>
+<body>
+	<div class="container">
+			<h1>IT firm Interview</h1>
+			<h4> Microsoft SQL Server HTTP ENDPOINT </h4>
+			<ol style="list-style-type: none;">
+				<li>GET /todo     <div class="pull-right">
+					<button class="btn btn-primary" onclick="getTodos()">Try It</button>
+				</div></li>
+				<pre id="get-todos-block">
+					<code id="get-todos-response"></code>
+				</pre>
+				<li>POST /todo     <div class="pull-right">
+					<button class="btn btn-secondary" onclick="tryPostTodo()">Try It</button><button class="btn btn-primary"  id='postTodoBtn' onclick="postTodo()">Send</button>
+				</div></li>
+				<input type="text" name="" id="post-todos-input">
+				<pre id="post-todos-block">
+					<code id="post-todos-response"></code>
+				</pre>
+				<p id="post-errors"></p>
+
+				
+
+				<li>DELETE /todo/<input class="form-control" type="text" placeholder="id" id="delete-id">     <div class="pull-right">
+					<button class="btn btn-warning" onclick="deleteTodo()">Try It</button>
+				</div></li>
+				<pre id="delete-todos-block">
+					<code id="delete-todos-response"></code>
+				</pre>
+				<p id="delete-errors"></p>
+	</ol>
+	</div>
+	<script type="text/javascript" src="js/jquery.min.js"></script>
+	<script type="text/javascript">
+		function getTodos(){
+			$('#get-todos-block').show();
+			$('#get-todos-response').html('sent GET')
+			$.ajax({
+			  url: "/todo/get",
+			  cache: false,
+			  success: function(data){
+			  	$("#get-todos-response").append('\n')
+			    $("#get-todos-response").append(syntaxHighlight(JSON.stringify(data).split("\\").join("")));
+			  }
+			});
+		}
+
+		function deleteTodo(){
+			var deleteId = $('#delete-id').val();
+			if(deleteId==undefined || deleteId.length<1){
+				$('#delete-errors').html('Invalid Object ID');
+
+				return;	
+			}
+			$('#delete-todos-block').show();
+			$('#delete-todos-response').html('sent DELETE')
+			$.ajax({
+			  url: "/todo/delete/"+deleteId,
+			  cache: false,
+			  type: "DELETE",
+			  success: function(data){
+			  	$("#delete-todos-response").append('\n')
+			    $("#delete-todos-response").append(syntaxHighlight(JSON.stringify(data).split("\\").join("")));
+			  }
+			});
+		}
+
+		function tryPostTodo(){
+			
+			$('#post-todos-input').show();
+			$('#postTodoBtn').show();		
+		}
+		function postTodo(){
+			$('#post-todos-input').show();
+			$('#post-todos-block').show();
+			
+
+			var json = $('#post-todos-input').val();
+			if(!IsValidJsonString(json)){
+				$('#post-errors').html('the body of the request is not a valid json')
+				return;
+			}
+			var validationResult = ValidateData(JSON.parse(json))
+			if(validationResult!='ok'){
+				$('#post-errors').html(validationResult+' field is required');
+				return;
+			}
+			$('#post-todos-response').html('sent POST');
+			$('#post-errors').html('');
+			$.ajax({
+			  url: "/todo/post",
+			  type: "POST",
+  			  data: JSON.parse(json),
+			  cache: false,
+			  success: function(data){
+			  	$("#post-todos-response").append('\n')
+			    $("#post-todos-response").append(JSON.stringify(data));
+			  }
+			});
+		}
+
+
+
+		function tryPutTodo(){
+			
+			$('#put-todos-input').show();
+			$('#putTodoBtn').show();		
+		}
+		function putTodo(){
+			$('#put-todos-input').show();
+			$('#put-todos-block').show();
+			var putId = $('#put-id').val();
+			if(putId==undefined || putId.length<1){
+				$('#put-errors').html('Invalid Object ID');
+
+				return;	
+			}
+			
+			var json = $('#put-todos-input').val();
+			if(!IsValidJsonString(json)){
+				$('#put-errors').html('the body of the request is not a valid json')
+				return;
+			}
+			//var validationResult = ValidateData(JSON.parse(json))
+			if(!ValidatePUTData(JSON.parse(json))){
+				$('#put-errors').html('You need modify at least one field');
+				return;
+			}
+			$('#put-todos-response').html('sent PUT')
+			$('#put-errors').html('');
+			$.ajax({
+			  url: "/todo/"+putId,
+			  type: "PUT",
+  			  data: JSON.parse(json),
+			  cache: false,
+			  success: function(data){
+			  	$("#put-todos-response").append('\n')
+			    $("#put-todos-response").append(JSON.stringify(data));
+			  }
+			});
+		}
+
+		function IsValidJsonString(string) {
+		    try {
+		        JSON.parse(string);
+		    } catch (e) {
+		        return false;
+		    }
+		    return true;
+		}
+		function ValidateData(data) {
+		    if(data.title==undefined){
+		    	return 'title';
+		    }
+		     if(data.description==undefined){
+		    	return 'description';
+		    }
+		    
+		    return 'ok';
+		}
+		function ValidatePUTData(data) {
+		    if(data.title==undefined
+		    	&&data.description==undefined
+		    	){
+		    	return false;
+		    }
+		    
+		    return true;
+		}
+
+		function syntaxHighlight(json) {
+		    json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+		    return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
+		        var cls = 'number';
+		        if (/^"/.test(match)) {
+		            if (/:$/.test(match)) {
+		                cls = 'key';
+		            } else {
+		                cls = 'string';
+		            }
+		        } else if (/true|false/.test(match)) {
+		            cls = 'boolean';
+		        } else if (/null/.test(match)) {
+		            cls = 'null';
+		        }
+		        return '<span class="' + cls + '">' + match + '</span>';
+		    });
+		}
+
+
+	</script>
+	<script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js" integrity="sha384-wfSDF2E50Y2D1uUdj0O3uMBJnjuUD4Ih7YwaYd1iqfktj0Uod8GCExl3Og8ifwB6" crossorigin="anonymous"></script>
+</body>
+</html>
+
